@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LAN Chat</title>
+</head>
+<body>
+  <h2>LAN Chat</h2>
+
+  <div>
+    <label>Enter your name:</label>
+    <input id="nameBox" placeholder="Your name" />
+    <button id="joinBtn">Join Chat</button>
+  </div>
+
+  <div id="chat" style="border:1px solid black; height:200px; overflow:auto; margin-top:10px;"></div>
+  <input id="msgBox" placeholder="Type a message" disabled />
+  <button id="sendBtn" disabled>Send</button>
+
+  <script>
+    let username = "";
+    const socket = new WebSocket(`ws://${location.hostname}:8080`);
+
+    socket.onopen = () => console.log("✅ Connected to server");
+    socket.onmessage = (event) => {
+      const chat = document.getElementById("chat");
+      chat.innerHTML += `<p>${event.data}</p>`;
+      chat.scrollTop = chat.scrollHeight;
+    };
+
+    document.getElementById("joinBtn").addEventListener("click", () => {
+      const nameInput = document.getElementById("nameBox").value.trim();
+      if(nameInput === "") return;
+      username = nameInput;
+
+      document.getElementById("msgBox").disabled = false;
+      document.getElementById("sendBtn").disabled = false;
+      document.getElementById("nameBox").disabled = true;
+      document.getElementById("joinBtn").disabled = true;
+
+      socket.send(`*** ${username} joined the chat ***`);
+    });
+
+    function sendMessage() {
+      const msg = document.getElementById("msgBox").value.trim();
+      if(msg === "" || username === "") return;
+
+      if(socket.readyState === WebSocket.OPEN){
+        socket.send(`${username}: ${msg}`);
+        document.getElementById("msgBox").value = "";
+      } else {
+        console.log("⚠️ WebSocket not open yet");
+      }
+    }
+
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
+    document.getElementById("msgBox").addEventListener("keyup", (e) => {
+      if(e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>

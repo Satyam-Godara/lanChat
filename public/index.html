@@ -1,62 +1,225 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>LAN Chat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f6fa;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Top Navbar */
+    header {
+      background: #1976d2;
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+    header .status {
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    /* Chat Area */
+    #chat-container {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message-bubble {
+      max-width: 60%;
+      padding: 10px 14px;
+      border-radius: 15px;
+      margin-bottom: 12px;
+      position: relative;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .mine {
+      background: #1976d2;
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 5px;
+    }
+    .theirs {
+      background: #eaeaea;
+      color: #333;
+      margin-right: auto;
+      border-bottom-left-radius: 5px;
+    }
+
+    .timestamp {
+      display: block;
+      font-size: 11px;
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    .system {
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+
+    /* Input Section */
+    #controls {
+      display: flex;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ddd;
+    }
+    #msgBox {
+      flex: 1;
+      padding: 12px;
+      border-radius: 25px;
+      border: 1px solid #ccc;
+      outline: none;
+      font-size: 14px;
+    }
+    #sendBtn {
+      background: #1976d2;
+      border: none;
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      margin-left: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    #sendBtn svg {
+      fill: white;
+      width: 20px;
+      height: 20px;
+    }
+
+    #join-section {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      gap: 10px;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+    #nameBox {
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+    #joinBtn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 20px;
+      background: #1976d2;
+      color: white;
+      cursor: pointer;
+    }
+    #joinBtn:hover {
+      background: #145ea8;
+    }
+  </style>
 </head>
 <body>
-  <h2>LAN Chat</h2>
+  <header>
+    <div>💬 LAN Chat</div>
+    <div class="status" id="status">🔴 Disconnected</div>
+  </header>
 
-  <div>
-    <label>Enter your name:</label>
-    <input id="nameBox" placeholder="Your name" />
+  <div id="join-section">
+    <input id="nameBox" placeholder="Enter your name" />
     <button id="joinBtn">Join Chat</button>
   </div>
 
-  <div id="chat" style="border:1px solid black; height:200px; overflow:auto; margin-top:10px;"></div>
-  <input id="msgBox" placeholder="Type a message" disabled />
-  <button id="sendBtn" disabled>Send</button>
+  <div id="chat-container"></div>
+
+  <div id="controls" style="display:none;">
+    <input id="msgBox" placeholder="Type your message..." />
+    <button id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" /></svg>
+    </button>
+  </div>
 
   <script>
     let username = "";
-    const socket = new WebSocket(`ws://${location.hostname}:8080`);
-    // const socket = new WebSocket(`wss://${location.host}`);
+    const socket = new WebSocket(
+      location.protocol === "https:" 
+        ? `wss://${location.host}` 
+        : `ws://${location.hostname}:8080`
+    );
 
+    const statusEl = document.getElementById("status");
 
-    socket.onopen = () => console.log("✅ Connected to server");
+    socket.onopen = () => {
+      statusEl.textContent = "🟢 Connected";
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = "🔴 Disconnected";
+    };
+
     socket.onmessage = (event) => {
-      const chat = document.getElementById("chat");
-      chat.innerHTML += `<p>${event.data}</p>`;
+      const chat = document.getElementById("chat-container");
+
+      if (event.data.startsWith("***")) {
+        const sys = document.createElement("div");
+        sys.className = "system";
+        sys.textContent = event.data;
+        chat.appendChild(sys);
+      } else {
+        const [sender, ...rest] = event.data.split(":");
+        const text = rest.join(":").trim();
+
+        const bubble = document.createElement("div");
+        bubble.className = "message-bubble " + (sender === username ? "mine" : "theirs");
+        bubble.innerHTML = `<span>${sender === username ? text : sender + ": " + text}</span>
+                            <span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+        chat.appendChild(bubble);
+      }
+
       chat.scrollTop = chat.scrollHeight;
     };
 
     document.getElementById("joinBtn").addEventListener("click", () => {
       const nameInput = document.getElementById("nameBox").value.trim();
-      if(nameInput === "") return;
+      if (nameInput === "") return;
       username = nameInput;
 
-      document.getElementById("msgBox").disabled = false;
-      document.getElementById("sendBtn").disabled = false;
-      document.getElementById("nameBox").disabled = true;
-      document.getElementById("joinBtn").disabled = true;
+      document.getElementById("join-section").style.display = "none";
+      document.getElementById("controls").style.display = "flex";
 
       socket.send(`*** ${username} joined the chat ***`);
     });
 
     function sendMessage() {
       const msg = document.getElementById("msgBox").value.trim();
-      if(msg === "" || username === "") return;
+      if (msg === "" || username === "") return;
 
-      if(socket.readyState === WebSocket.OPEN){
+      if (socket.readyState === WebSocket.OPEN) {
         socket.send(`${username}: ${msg}`);
         document.getElementById("msgBox").value = "";
-      } else {
-        console.log("⚠️ WebSocket not open yet");
       }
     }
 
     document.getElementById("sendBtn").addEventListener("click", sendMessage);
     document.getElementById("msgBox").addEventListener("keyup", (e) => {
-      if(e.key === "Enter") sendMessage();
+      if (e.key === "Enter") sendMessage();
     });
   </script>
 </body>

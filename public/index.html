@@ -18,8 +18,8 @@
 
   <script>
     let username = "";
-    // const socket = new WebSocket(`ws://${location.hostname}:8080`);
-    const socket = new WebSocket(`wss://${location.host}`);
+    const socket = new WebSocket(`ws://${location.hostname}:8080`);
+    // const socket = new WebSocket(`wss://${location.host}`);
 
 
     socket.onopen = () => console.log("✅ Connected to server");

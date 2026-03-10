@@ -43,7 +43,7 @@ chatapp/
 Clone the repository:
 
 ```
-git clone https://github.com/satyamgodara/chatapp.git
+git clone https://github.com/satyamgodara/lanchat.git
 cd chatapp
 ```
 
